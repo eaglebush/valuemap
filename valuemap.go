@@ -48,19 +48,6 @@ func (m *ValueMap[K, V]) Merge(other ValueMap[K, V]) {
 	}
 }
 
-// // Equal checks if two ValueMaps are equal
-// func (m ValueMap[K, V]) Equal(other ValueMap[K, V]) bool {
-// 	if len(m.data) != len(other.data) {
-// 		return false
-// 	}
-// 	for k, v := range m.data {
-// 		if ov, ok := other.data[k]; !ok || ov != v {
-// 			return false
-// 		}
-// 	}
-// 	return true
-// }
-
 func (m ValueMap[K, V]) Equal(other ValueMap[K, V]) bool {
 	if len(m.data) != len(other.data) {
 		return false
