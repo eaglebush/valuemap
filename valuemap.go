@@ -2,18 +2,10 @@ package valuemap
 
 import (
 	"maps"
-	"reflect"
 	"sync"
 )
 
-type noCopy struct{}
-
-func (*noCopy) Lock()   {}
-func (*noCopy) Unlock() {}
-
 type ValueMap[K comparable, V any] struct {
-	_    noCopy
-	mu   sync.RWMutex
 	data map[K]V
 }
 
@@ -30,70 +22,59 @@ func FromMap[K comparable, V any](m map[K]V) *ValueMap[K, V] {
 }
 
 // Set assigns a value to a key.
-func (m *ValueMap[K, V]) Set(key K, value V) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+//
+// mu is an external mutex to lock the internal map during value assigning
+func (m *ValueMap[K, V]) Set(mu *sync.RWMutex, key K, value V) {
+	mu.Lock()
+	defer mu.Unlock()
 	m.data[key] = value
 }
 
 // Get retrieves a value and a boolean indicating if the key exists.
-func (m *ValueMap[K, V]) Get(key K) (V, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+//
+// mu is an external mutex to lock the internal map during value retrieval
+func (m *ValueMap[K, V]) Get(mu *sync.RWMutex, key K) (V, bool) {
+	mu.RLock()
+	defer mu.RUnlock()
 	v, ok := m.data[key]
 	return v, ok
 }
 
 // Delete removes a key from the map.
-func (m *ValueMap[K, V]) Delete(key K) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+//
+// mu is an external mutex to lock the internal map during key deletion
+func (m *ValueMap[K, V]) Delete(mu *sync.RWMutex, key K) {
+	mu.Lock()
+	defer mu.Unlock()
 	delete(m.data, key)
 }
 
 // Clone returns a deep copy of the ValueMap.
-func (m *ValueMap[K, V]) Clone() *ValueMap[K, V] {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+//
+// mu is an external mutex to lock the internal map during cloning
+func (m *ValueMap[K, V]) Clone(mu *sync.RWMutex) *ValueMap[K, V] {
+	mu.Lock()
+	defer mu.Unlock()
 	cp := make(map[K]V, len(m.data))
 	maps.Copy(cp, m.data)
 	return &ValueMap[K, V]{data: cp}
 }
 
 // Merge adds or overwrites keys from another ValueMap into this one.
-func (m *ValueMap[K, V]) Merge(other *ValueMap[K, V]) {
-	other.mu.RLock()
-	defer other.mu.RUnlock()
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
+//
+// mu is an external mutex to lock the internal map during value merging
+func (m *ValueMap[K, V]) Merge(mu *sync.RWMutex, other *ValueMap[K, V]) {
+	mu.Lock()
+	defer mu.Unlock()
 	maps.Copy(m.data, other.data)
 }
 
-// Equal performs a deep equality check.
-func (m *ValueMap[K, V]) Equal(other *ValueMap[K, V]) bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	other.mu.RLock()
-	defer other.mu.RUnlock()
-
-	if len(m.data) != len(other.data) {
-		return false
-	}
-	for k, v := range m.data {
-		ov, ok := other.data[k]
-		if !ok || !reflect.DeepEqual(v, ov) {
-			return false
-		}
-	}
-	return true
-}
-
 // Keys returns a slice of all keys.
-func (m *ValueMap[K, V]) Keys() []K {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+//
+// mu is an external mutex to lock the internal map during key retrieval
+func (m *ValueMap[K, V]) Keys(mu *sync.RWMutex) []K {
+	mu.RLock()
+	defer mu.RUnlock()
 	keys := make([]K, 0, len(m.data))
 	for k := range m.data {
 		keys = append(keys, k)
@@ -102,9 +83,11 @@ func (m *ValueMap[K, V]) Keys() []K {
 }
 
 // Values returns a slice of all values.
-func (m *ValueMap[K, V]) Values() []V {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+//
+// mu is an external mutex to lock the internal map during value retrieval
+func (m *ValueMap[K, V]) Values(mu *sync.RWMutex) []V {
+	mu.RLock()
+	defer mu.RUnlock()
 	values := make([]V, 0, len(m.data))
 	for _, v := range m.data {
 		values = append(values, v)
@@ -113,23 +96,29 @@ func (m *ValueMap[K, V]) Values() []V {
 }
 
 // Len returns the number of key-value pairs.
-func (m *ValueMap[K, V]) Len() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+//
+// mu is an external mutex to lock the internal map during map content counting
+func (m *ValueMap[K, V]) Len(mu *sync.RWMutex) int {
+	mu.RLock()
+	defer mu.RUnlock()
 	return len(m.data)
 }
 
 // Clear removes all entries from the map.
-func (m *ValueMap[K, V]) Clear() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+//
+// mu is an external mutex to lock the internal map during map clearing
+func (m *ValueMap[K, V]) Clear(mu *sync.RWMutex) {
+	mu.Lock()
+	defer mu.Unlock()
 	m.data = make(map[K]V)
 }
 
 // Raw returns a read-only copy of the internal map.
-func (m *ValueMap[K, V]) Raw() map[K]V {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+//
+// mu is an external mutex to lock the internal map during raw value retrieval
+func (m *ValueMap[K, V]) Raw(mu *sync.RWMutex) map[K]V {
+	mu.RLock()
+	defer mu.RUnlock()
 	cp := make(map[K]V, len(m.data))
 	for k, v := range m.data {
 		cp[k] = v
