@@ -1,6 +1,9 @@
 package valuemap
 
-import "reflect"
+import (
+	"maps"
+	"reflect"
+)
 
 type ValueMap[K comparable, V any] struct {
 	data map[K]V
@@ -14,9 +17,7 @@ func New[K comparable, V any]() ValueMap[K, V] {
 // FromMap creates a ValueMap from an existing map (clones it)
 func FromMap[K comparable, V any](m map[K]V) ValueMap[K, V] {
 	newMap := make(map[K]V, len(m))
-	for k, v := range m {
-		newMap[k] = v
-	}
+	maps.Copy(newMap, m)
 	return ValueMap[K, V]{data: newMap}
 }
 
