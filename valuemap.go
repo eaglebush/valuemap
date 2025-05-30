@@ -1,6 +1,7 @@
 package valuemap
 
 import (
+	"maps"
 	"reflect"
 	"sync"
 )
@@ -24,9 +25,7 @@ func New[K comparable, V any]() *ValueMap[K, V] {
 // FromMap returns a new ValueMap initialized with a copy of an existing map.
 func FromMap[K comparable, V any](m map[K]V) *ValueMap[K, V] {
 	cp := make(map[K]V, len(m))
-	for k, v := range m {
-		cp[k] = v
-	}
+	maps.Copy(cp, m)
 	return &ValueMap[K, V]{data: cp}
 }
 
@@ -57,9 +56,7 @@ func (m *ValueMap[K, V]) Clone() *ValueMap[K, V] {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	cp := make(map[K]V, len(m.data))
-	for k, v := range m.data {
-		cp[k] = v
-	}
+	maps.Copy(cp, m.data)
 	return &ValueMap[K, V]{data: cp}
 }
 
@@ -70,10 +67,7 @@ func (m *ValueMap[K, V]) Merge(other *ValueMap[K, V]) {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	for k, v := range other.data {
-		m.data[k] = v
-	}
+	maps.Copy(m.data, other.data)
 }
 
 // Equal performs a deep equality check.
